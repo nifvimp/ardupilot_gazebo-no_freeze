@@ -980,12 +980,12 @@ void ArduPilotPlugin::ReceiveMotorCommand()
   {
     // increase timeout for receive once we detect a packet from
     // ArduPilot FCS.
-    waitMs = 1000;
+    waitMs = 100;
   }
   else
   {
     // Otherwise skip quickly and do not set control force.
-    waitMs = 1;
+    waitMs = 0;
   }
   ssize_t recvSize =
     this->dataPtr->socket_in.Recv(&pkt, sizeof(ServoPacket), waitMs);
@@ -1016,23 +1016,13 @@ void ArduPilotPlugin::ReceiveMotorCommand()
   {
     // didn't receive a packet
     // gzdbg << "no packet\n";
-    gazebo::common::Time::NSleep(100);
     if (this->dataPtr->arduPilotOnline)
     {
+      this->dataPtr->connectionTimeoutCount = 0;
+      this->dataPtr->arduPilotOnline = false;
       gzwarn << "[" << this->dataPtr->modelName << "] "
-             << "Broken ArduPilot connection, count ["
-             << this->dataPtr->connectionTimeoutCount
-             << "/" << this->dataPtr->connectionTimeoutMaxCount
-             << "]\n";
-      if (++this->dataPtr->connectionTimeoutCount >
-        this->dataPtr->connectionTimeoutMaxCount)
-      {
-        this->dataPtr->connectionTimeoutCount = 0;
-        this->dataPtr->arduPilotOnline = false;
-        gzwarn << "[" << this->dataPtr->modelName << "] "
-               << "Broken ArduPilot connection, resetting motor control.\n";
-        this->ResetPIDs();
-      }
+             << "Broken ArduPilot connection, resetting motor control.\n";
+      this->ResetPIDs();
     }
   }
   else
